@@ -6,9 +6,9 @@ colorTo: green
 sdk: docker
 app_port: 7860
 pinned: false
+---
 
----# 🌍 Assistive Navigation Decision Environmen
-
+# 🌍 Assistive Navigation Decision Environment
 ## 🚀 Overview
 
 The **Assistive Navigation Decision Environment** is a real-world inspired OpenEnv environment designed to train and evaluate AI agents in making **safe navigation decisions for visually impaired individuals**.
