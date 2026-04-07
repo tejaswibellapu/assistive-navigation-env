@@ -1,0 +1,20 @@
+[project]
+name = "assistive-navigation-env"
+version = "0.1.0"
+description = "Assistive Navigation Decision Environment for visually impaired AI agents"
+authors = [
+    { name = "Tejaswi" }
+]
+dependencies = [
+    "pydantic",
+    "fastapi",
+    "uvicorn",
+    "openai",
+    "openenv-core"
+]
+
+[tool.openenv]
+entry_point = "my_env.env:AssistiveEnv"
+
+[project.scripts]
+server = "server.app:main"

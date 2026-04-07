@@ -1,0 +1,8 @@
+name: assistive_navigation_env
+description: Dynamic assistive navigation environment for visually impaired decision-making
+entry_point: my_env.env:AssistiveEnv
+
+tasks:
+  - name: easy
+  - name: medium
+  - name: hard
