@@ -12,6 +12,7 @@ def reset():
     return {"observation": obs.description}
 
 
+
 # ✅ REQUIRED MAIN FUNCTION
 def main():
     uvicorn.run(app, host="0.0.0.0", port=7860)
@@ -20,3 +21,6 @@ def main():
 # ✅ REQUIRED ENTRY POINT
 if __name__ == "__main__":
     main()
+@app.get("/")
+def home():
+    return {"message": "Assistive Navigation Environment is running 🚀"}
