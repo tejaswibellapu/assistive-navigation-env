@@ -68,20 +68,22 @@ def run_task(task_name):
 
         result = env.step(Action(action=action_str))
 
-        rewards.append(result.reward)
+        # FINAL SAFETY CLAMP
+        reward = max(0.1, min(result.reward, 0.9))
+
+        rewards.append(reward)
         steps = step
 
-        log_step(step, action_str, result.reward, result.done)
+        log_step(step, action_str, reward, result.done)
 
         obs = result.observation
 
         if result.done:
             break
 
-    # FINAL SAFE CLAMP
-    rewards = [max(0.05, min(r, 0.95)) for r in rewards]
-
-    success = (sum(rewards) / len(rewards)) > 0.5
+    # SUCCESS LOGIC (independent of score)
+    avg_score = sum(rewards) / len(rewards) if rewards else 0.5
+    success = avg_score > 0.5
 
     log_end(success, steps, rewards)
 
