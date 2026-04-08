@@ -1,23 +1,74 @@
-def compute_reward(action, correct_action, step_idx, total_steps):
-    # base score
-    reward = 0.5
+from my_env.models import Observation, Action, StepResult
+from my_env.scenarios import generate_scenario
+from my_env.grader import compute_reward
 
-    # correctness
-    if action == correct_action:
-        reward += 0.3
-    else:
-        reward -= 0.2
 
-    # safety penalty
-    if correct_action in ["STOP", "WAIT"] and action == "MOVE_FORWARD":
-        reward -= 0.2
+class AssistiveEnv:
+    def __init__(self, task_name="easy"):
+        self.task_name = task_name
+        self.steps = []
+        self.current_step = 0
+        self.done = False
+        self.history = []
 
-    # progress bonus
-    progress = (step_idx + 1) / max(total_steps, 1)
-    if action == correct_action:
-        reward += 0.2 * progress
+    def reset(self):
+        self.steps = generate_scenario(self.task_name)
+        self.current_step = 0
+        self.done = False
+        self.history = []
+        return self._get_obs()
 
-    # STRICT CLAMP (NEVER 0 or 1)
-    reward = max(0.1, min(reward, 0.9))
+    def _get_obs(self):
+        step = self.steps[self.current_step]
+        return Observation(
+            description=step["description"],
+            step_count=self.current_step,
+            history=self.history[-3:]
+        )
 
-    return reward
+    def step(self, action: Action):
+        if self.done:
+            return StepResult(
+                observation=self._get_obs(),
+                reward=0.1,
+                done=True
+            )
+
+        step_data = self.steps[self.current_step]
+        correct_action = step_data["correct_action"]
+
+        reward = compute_reward(
+            action.action,
+            correct_action,
+            self.current_step,
+            len(self.steps)
+        )
+
+        reward = max(0.1, min(reward, 0.9))
+
+        self.history.append(f"{action.action} -> {correct_action}")
+
+        if action.action == correct_action:
+            self.current_step += 1
+
+        if self.current_step >= len(self.steps):
+            self.done = True
+
+        return StepResult(
+            observation=self._get_obs() if not self.done else Observation(
+                description="Navigation completed safely.",
+                step_count=self.current_step,
+                history=self.history
+            ),
+            reward=reward,
+            done=self.done,
+            info={"correct_action": correct_action}
+        )
+
+    def state(self):
+        return {
+            "task": self.task_name,
+            "step": self.current_step,
+            "history": self.history,
+            "done": self.done
+        }
