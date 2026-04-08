@@ -78,7 +78,14 @@ def run_task(task_name):
         if result.done:
             break
 
-    success = sum(rewards) > 0
+    # compute normalized score
+    avg_score = sum(rewards) / len(rewards) if rewards else 0.5
+
+# clamp strictly (0,1)
+    avg_score = max(0.05, min(avg_score, 0.95))
+
+    success = avg_score > 0.5
+
     log_end(success, steps, rewards)
 
 
