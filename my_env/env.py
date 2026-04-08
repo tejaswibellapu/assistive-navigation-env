@@ -30,7 +30,7 @@ class AssistiveEnv:
         if self.done:
             return StepResult(
                 observation=self._get_obs(),
-                reward=0.0,
+                reward=0.05,  # FIXED (no 0)
                 done=True
             )
 
@@ -43,6 +43,9 @@ class AssistiveEnv:
             self.current_step,
             len(self.steps)
         )
+
+        # EXTRA SAFETY CLAMP
+        reward = max(0.05, min(reward, 0.95))
 
         self.history.append(f"{action.action} -> {correct_action}")
 

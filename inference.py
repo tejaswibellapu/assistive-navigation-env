@@ -38,7 +38,7 @@ Rules:
 - If danger → STOP or WAIT
 - If safe → MOVE_FORWARD or turn
 
-Respond ONLY with one:
+Respond ONLY with:
 MOVE_FORWARD, STOP, TURN_LEFT, TURN_RIGHT, WAIT
 """
 
@@ -63,7 +63,7 @@ def run_task(task_name):
     for step in range(1, MAX_STEPS + 1):
         try:
             action_str = get_action(obs.description)
-        except Exception as e:
+        except:
             action_str = "STOP"
 
         result = env.step(Action(action=action_str))
@@ -78,13 +78,10 @@ def run_task(task_name):
         if result.done:
             break
 
-    # compute normalized score
-    avg_score = sum(rewards) / len(rewards) if rewards else 0.5
+    # FINAL SAFE CLAMP
+    rewards = [max(0.05, min(r, 0.95)) for r in rewards]
 
-# clamp strictly (0,1)
-    avg_score = max(0.05, min(avg_score, 0.95))
-
-    success = avg_score > 0.5
+    success = (sum(rewards) / len(rewards)) > 0.5
 
     log_end(success, steps, rewards)
 
