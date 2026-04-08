@@ -1,11 +1,15 @@
 import os
+from openai import OpenAI
 from my_env.env import AssistiveEnv
 from my_env.models import Action
 
-API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+API_BASE_URL = os.environ["API_BASE_URL"]
+API_KEY = os.environ["API_KEY"]
+MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
 
 MAX_STEPS = 8
+
+client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
 
 def log_start(task, env, model):
@@ -21,28 +25,30 @@ def log_end(success, steps, rewards):
     print(f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}")
 
 
-# 🔥 RULE-BASED AGENT (no API needed)
 def get_action(obs_text):
-    text = obs_text.lower()
+    prompt = f"""
+You are assisting a visually impaired person.
 
-    # Safety first
-    if "red" in text:
-        return "WAIT"
+Situation:
+{obs_text}
 
-    if "approaching" in text or "crosses" in text:
-        return "STOP"
+Rules:
+- Prioritize safety
+- Avoid collisions
+- If danger → STOP or WAIT
+- If safe → MOVE_FORWARD or turn
 
-    if "blocked" in text:
-        if "left" in text:
-            return "TURN_LEFT"
-        elif "right" in text:
-            return "TURN_RIGHT"
+Respond ONLY with one:
+MOVE_FORWARD, STOP, TURN_LEFT, TURN_RIGHT, WAIT
+"""
 
-    if "clear" in text or "green" in text:
-        return "MOVE_FORWARD"
+    response = client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=10,
+    )
 
-    # default fallback
-    return "STOP"
+    return response.choices[0].message.content.strip()
 
 
 def run_task(task_name):
@@ -55,7 +61,10 @@ def run_task(task_name):
     log_start(task_name, "assistive_navigation_env", MODEL_NAME)
 
     for step in range(1, MAX_STEPS + 1):
-        action_str = get_action(obs.description)
+        try:
+            action_str = get_action(obs.description)
+        except Exception as e:
+            action_str = "STOP"
 
         result = env.step(Action(action=action_str))
 
