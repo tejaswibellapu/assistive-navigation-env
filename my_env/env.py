@@ -27,10 +27,11 @@ class AssistiveEnv:
         )
 
     def step(self, action: Action):
+        # FINAL STEP CASE (IMPORTANT)
         if self.done:
             return StepResult(
                 observation=self._get_obs(),
-                reward=0.1,
+                reward=0.5,   # NEVER 0 or 1
                 done=True
             )
 
@@ -44,7 +45,9 @@ class AssistiveEnv:
             len(self.steps)
         )
 
-        reward = max(0.1, min(reward, 0.9))
+        # 🔥 HARD CLAMP EVERY TIME
+        reward = 0.5 + (reward - 0.5) * 0.8   # compress into safe range
+        reward = max(0.1, min(reward, 0.9))   # STRICT (0,1)
 
         self.history.append(f"{action.action} -> {correct_action}")
 

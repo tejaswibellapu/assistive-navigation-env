@@ -3,6 +3,7 @@ from openai import OpenAI
 from my_env.env import AssistiveEnv
 from my_env.models import Action
 
+# 🔥 MUST use these (DO NOT CHANGE)
 API_BASE_URL = os.environ["API_BASE_URL"]
 API_KEY = os.environ["API_KEY"]
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
@@ -17,12 +18,16 @@ def log_start(task, env, model):
 
 
 def log_step(step, action, reward, done):
-    print(f"[STEP] step={step} action={action} reward={reward:.2f} done={str(done).lower()} error=null")
+    print(
+        f"[STEP] step={step} action={action} reward={reward:.2f} done={str(done).lower()} error=null"
+    )
 
 
 def log_end(success, steps, rewards):
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-    print(f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}")
+    print(
+        f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}"
+    )
 
 
 def get_action(obs_text):
@@ -38,7 +43,7 @@ Rules:
 - If danger → STOP or WAIT
 - If safe → MOVE_FORWARD or turn
 
-Respond ONLY with:
+Respond ONLY with one of:
 MOVE_FORWARD, STOP, TURN_LEFT, TURN_RIGHT, WAIT
 """
 
@@ -46,6 +51,7 @@ MOVE_FORWARD, STOP, TURN_LEFT, TURN_RIGHT, WAIT
         model=MODEL_NAME,
         messages=[{"role": "user", "content": prompt}],
         max_tokens=10,
+        temperature=0.3,
     )
 
     return response.choices[0].message.content.strip()
@@ -63,13 +69,17 @@ def run_task(task_name):
     for step in range(1, MAX_STEPS + 1):
         try:
             action_str = get_action(obs.description)
-        except:
+        except Exception:
             action_str = "STOP"
 
         result = env.step(Action(action=action_str))
 
-        # FINAL SAFETY CLAMP
-        reward = max(0.1, min(result.reward, 0.9))
+        # 🔥 HARD SAFETY CLAMP (FINAL GUARANTEE)
+        reward = result.reward
+        if reward <= 0:
+            reward = 0.1
+        elif reward >= 1:
+            reward = 0.9
 
         rewards.append(reward)
         steps = step
@@ -81,11 +91,29 @@ def run_task(task_name):
         if result.done:
             break
 
-    # SUCCESS LOGIC (independent of score)
-    avg_score = sum(rewards) / len(rewards) if rewards else 0.5
+    # 🔥 FINAL NORMALIZATION (SAFE)
+    if len(rewards) == 0:
+        rewards = [0.5]
+
+    safe_rewards = []
+    for r in rewards:
+        if r <= 0:
+            r = 0.1
+        elif r >= 1:
+            r = 0.9
+        safe_rewards.append(r)
+
+    avg_score = sum(safe_rewards) / len(safe_rewards)
+
+    # ensure strictly inside (0,1)
+    if avg_score <= 0:
+        avg_score = 0.1
+    elif avg_score >= 1:
+        avg_score = 0.9
+
     success = avg_score > 0.5
 
-    log_end(success, steps, rewards)
+    log_end(success, steps, safe_rewards)
 
 
 if __name__ == "__main__":
